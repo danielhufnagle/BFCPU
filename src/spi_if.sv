@@ -10,18 +10,19 @@
 interface spi_if #(
   parameter int DATA_W = 1
 );
-
-  logic [DATA_W-1:0] data;
-  logic              valid;
-
-  modport spi_slave ( // external memeory
+  logic cs;
+  logic sclk;
+  logic mosi;
+  logic miso;
+  
+  modport slave ( // external memeory
     input  sclk,
     input  cs,
     input  mosi,
     output miso
   );
 
-  modport spi_master ( // ASIC
+  modport master ( // ASIC
     output sclk,
     output cs, //active low, activates slave
     output mosi, //data from asic

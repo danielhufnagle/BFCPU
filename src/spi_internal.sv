@@ -1,0 +1,181 @@
+//TODO: this moduel needs to be an internal interface for SPI
+// It can take in data (8 bytes, paramterizable) & address
+// - it then seralizes that data and sends to to the external memory
+
+// It can just take an address 
+// - It then fetches the data from that adress, compacts the serial data to a byte and returns it
+// Data is usually shifted out with the most-significant bit (MSB) first
+
+// Basic transaction flow
+// 1. Set CS low (listening)
+// 2. send command byte
+// 3. send address (16 bits)
+// 4. read/write stream
+// 5. CS high
+
+// Suggested pinout from the tiny tapeout website
+// IF using In_out pins:
+// uio[0] - GPIO21 - CS
+// uio[1] - GPIO22 - MOSI
+// uio[2] - GPIO23 - MISO
+// uio[3] - GPIO24 - SCK
+
+// If using regular in and out pins, i dont think it really matters
+// uo_out[4] - CS
+// uo_out[3] - MOSI
+// ui_in[2] - MISO
+// uo_out[5] - SCK
+
+module spi_internal #(
+    parameter DATA_W = 8,
+    parameter ADDR_W = 16
+) (
+    input  logic              clk,
+    input  logic              reset_n,
+    input  logic              in_valid_i,
+    input  logic              command_i, //0 for read, 1 for write
+    input  logic [DATA_W-1:0] data_i,
+    input  logic [ADDR_W-1:0] address_i,
+    output logic              out_valid_o, //for read
+    output logic [DATA_W-1:0] data_o,
+    output logic              done_o, //for write, idk if needed
+
+    spi_if.master             spi_bundle
+);
+
+localparam logic [DATA_W-1:0] READ_CMD         = 8'h03; // we expect data immeditly after we give address (low spi_clk)
+localparam logic [DATA_W-1:0] FAST_READ_CMD    = 8'h0B; //we give SRAM dmmy cyles so it has time to read (high spi clk)
+localparam logic [DATA_W-1:0] WRITE_CMD        = 8'h02;
+localparam logic [DATA_W-1:0] WRITE_STATUS_CMD = 8'h01;
+localparam logic [DATA_W-1:0] READ_STATUS_CMD  = 8'h05;
+localparam int ADDR_BIT_W                      = $clog2(ADDR_W); 
+
+typedef enum logic [4:0] {IDLE, SHIFT_COMMAND, SHIFT_ADDR, READ , WRITE} state_t;
+state_t current_state, next_state;
+
+logic [ADDR_BIT_W-1:0] counter_q, counter_d; //use for both addr, and command
+logic [DATA_W-1:0]     command_val_d, command_val_q;
+logic [ADDR_W-1:0]     address_q, address_d;
+logic [DATA_W-1:0]     data_q, data_d;
+logic [DATA_W-1:0]     data_out_d;
+logic                  cs_d;
+logic                  mosi_d;
+logic                  command_q, command_d;
+logic                  done_d;
+logic                  out_valid_d;
+
+
+//TODO: If valid & command_i = 0, then do fast read & send data out
+//TODO: If valid & command_i = 1, then do write
+//TODO: decide if fast read for normal is better
+
+// FSM = IDLE -> READ || WRITE -> IDLE
+// On transition idle -> read || write CS = 0
+// Then send command & address (shift in both)
+// IF read then compact serial-> byte
+// out_valid_o/done = 1 on return to idle
+
+//NOTE: once you read it just keeps streaming out data untill you shut it off, 
+//so we can techinally get as many bytes as we want, as long as they are consecutive
+//non sequential addresses need seperate reads
+
+assign spi_bundle.sclk = clk;
+
+always_ff @(posedge clk) begin
+    if(!reset_n) begin
+        current_state <= IDLE;
+        spi_bundle.cs <= '0;
+        counter_q     <= '0;
+        done_o        <= '0;
+        out_valid_o   <= '0;
+    end else begin
+        current_state   <= next_state;
+        spi_bundle.cs   <= cs_d;
+        command_q       <= command_d;
+        command_val_q   <= command_val_d;
+        counter_q       <= counter_d;
+        spi_bundle.mosi <= mosi_d;
+        address_q       <= address_d;
+        data_q          <= data_d;
+        data_o          <= data_out_d;
+        out_valid_o     <= out_valid_d;
+        done_o          <= done_d;
+    end
+end
+
+always_comb begin
+    //defaults
+    cs_d          = spi_bundle.cs; //TODO fix this ass signal, not correct rn.
+    mosi_d        = 1'b0;
+    out_valid_d   = 1'b0;
+    done_d        = 1'b0;
+    command_d     = command_q;
+    counter_d     = counter_q;
+    command_val_d = command_val_q;
+    address_d     = address_q;
+    next_state    = current_state;
+    data_d        = data_q;
+    data_out_d    = data_o;
+
+    unique case(current_state)
+        IDLE : begin
+                if(in_valid_i) begin
+                    cs_d          = 1'b0;
+                    next_state    = SHIFT_COMMAND;
+                    command_d     = command_i;
+                    address_d     = address_i;
+                    data_d        = data_i;
+                    command_val_d = command_i ? WRITE_CMD : READ_CMD;
+                end
+            end 
+        
+        SHIFT_COMMAND : begin
+            if(counter_q+1 == DATA_W) begin
+                counter_d  = '0;
+                next_state = SHIFT_ADDR;
+            end else begin
+                mosi_d        = command_val_q[DATA_W-1];
+                command_val_d = command_val_q << 1;
+                counter_d     = counter_q + 1;
+            end
+        end
+
+        SHIFT_ADDR : begin
+            if(counter_q+1 == ADDR_W) begin
+                counter_d  = '0;
+                next_state = command_q ? WRITE : READ;
+            end else begin
+                mosi_d    = address_q[ADDR_W-1]; 
+                address_d = address_q << 1;
+                counter_d = counter_q + 1;
+            end
+        end
+
+        READ : begin // listen to data
+            if(counter_q+1 == DATA_W) begin
+                counter_d   = '0;
+                cs_d        = 1'b0;
+                out_valid_d = 1'b1;
+                next_state  = IDLE; //technically dosen't have to be, but makes things simpler
+            end else begin
+                counter_d  = counter_q + 1;
+                data_out_d = {data_o[DATA_W-1:1], spi_bundle.miso};
+            end
+        end
+
+        WRITE : begin 
+            if(counter_q+1 == DATA_W) begin
+                counter_d  = '0;
+                cs_d       = 1'b0;
+                done_d     = 1'b1;
+                next_state = IDLE; //technically dosen't have to be, but makes things simpler
+            end else begin
+                mosi_d    = data_q[ADDR_W-1]; 
+                data_d    = data_q << 1;
+                counter_d = counter_q + 1;
+            end  
+        end
+    endcase
+end
+    
+endmodule : spi_internal

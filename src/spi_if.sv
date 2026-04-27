@@ -1,11 +1,5 @@
 // ASIC = SPI master controller
 // RP2040 = SPI RAM slave
-// Serial protocols will often send the least significant bits first 
-
-// Drives the clock (SCLK)
-// Selects the device, active low (CS)
-// ASIC sends data (MOSI)
-// SRAM sends data (MISO)
 
 interface spi_if #(
   parameter int DATA_W = 1

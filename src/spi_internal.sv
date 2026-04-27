@@ -105,7 +105,7 @@ end
 
 always_comb begin
     //defaults
-    cs_d          = spi_bundle.cs; //TODO fix this ass signal, not correct rn.
+    cs_d          = spi_bundle.cs;
     mosi_d        = 1'b0;
     out_valid_d   = 1'b0;
     done_d        = 1'b0;
@@ -119,6 +119,7 @@ always_comb begin
 
     unique case(current_state)
         IDLE : begin
+                cs_d = 1'b1;
                 if(in_valid_i) begin
                     cs_d          = 1'b0;
                     next_state    = SHIFT_COMMAND;

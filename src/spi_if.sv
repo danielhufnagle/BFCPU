@@ -1,5 +1,6 @@
 // ASIC = SPI master controller
 // RP2040 = SPI RAM slave
+// SV
 
 interface spi_if #(
   parameter int DATA_W = 1

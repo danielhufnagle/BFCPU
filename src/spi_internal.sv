@@ -74,6 +74,7 @@ command_t              command_q, command_d;
 //TODO: If valid & command_i = 0, then do fast read & send data out
 //TODO: If valid & command_i = 1, then do write
 //TODO: Decide if fast read for normal is better
+//TODO: make verilog
 
 // FSM = IDLE -> READ || WRITE -> IDLE
 // On transition idle -> read || write CS = 0
@@ -134,7 +135,7 @@ always_comb begin
                     command_d     = command_i;
                     address_d     = address_i;
                     data_d        = data_i;
-                    command_val_d = command_i ? WRITE_CMD : READ_CMD;
+                    command_val_d = (command_i == WRITE_T) ? WRITE_CMD : READ_CMD;
                 end
             end 
         

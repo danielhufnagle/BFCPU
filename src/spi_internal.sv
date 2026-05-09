@@ -30,12 +30,13 @@ module spi_internal #(
     parameter DATA_W = 8,
     parameter ADDR_W = 16
 ) (
-    input  logic              clk,
-    input  logic              reset_n,
-    input  logic              in_valid_i,
-    input  logic              command_i, //0 for read, 1 for write
-    input  logic [DATA_W-1:0] data_i,
-    input  logic [ADDR_W-1:0] address_i,
+    input logic              clk,
+    input logic              reset_n,
+    input logic              in_valid_i,
+    input logic              command_i, //0 for read, 1 for write
+    input logic [DATA_W-1:0] data_i,
+    input logic [ADDR_W-1:0] address_i,
+    
     output logic              out_valid_o, //for read
     output logic [DATA_W-1:0] data_o,
     output logic              done_o, //for write, idk if needed
@@ -48,7 +49,8 @@ localparam logic [DATA_W-1:0] FAST_READ_CMD    = 8'h0B; //we give SRAM dmmy cyle
 localparam logic [DATA_W-1:0] WRITE_CMD        = 8'h02;
 localparam logic [DATA_W-1:0] WRITE_STATUS_CMD = 8'h01;
 localparam logic [DATA_W-1:0] READ_STATUS_CMD  = 8'h05;
-localparam int ADDR_BIT_W                      = $clog2(ADDR_W); 
+
+localparam int ADDR_BIT_W = $clog2(ADDR_W); 
 
 typedef enum logic [4:0] {IDLE, SHIFT_COMMAND, SHIFT_ADDR, READ , WRITE} state_t;
 state_t current_state, next_state;
@@ -57,7 +59,7 @@ logic [ADDR_BIT_W-1:0] counter_q, counter_d; //use for both addr, and command
 logic [DATA_W-1:0]     command_val_d, command_val_q;
 logic [ADDR_W-1:0]     address_q, address_d;
 logic [DATA_W-1:0]     data_q, data_d;
-logic [DATA_W-1:0]     data_out_d;
+logic [DATA_W-1:0]     data_out_d, data_out_q;
 logic                  cs_d;
 logic                  mosi_d;
 logic                  command_q, command_d;
@@ -81,7 +83,7 @@ logic                  out_valid_d;
 
 assign spi_bundle.sclk = clk;
 
-always_ff @(posedge clk) begin
+always_ff @(posedge clk or negedge reset_n) begin
     if(!reset_n) begin
         current_state <= IDLE;
         spi_bundle.cs <= '0;
@@ -97,25 +99,27 @@ always_ff @(posedge clk) begin
         spi_bundle.mosi <= mosi_d;
         address_q       <= address_d;
         data_q          <= data_d;
-        data_o          <= data_out_d;
+        data_out_q      <= data_out_d;
         out_valid_o     <= out_valid_d;
         done_o          <= done_d;
     end
 end
 
+assign data_o = data_out_q;
+
 always_comb begin
     //defaults
-    cs_d          = spi_bundle.cs;
     mosi_d        = 1'b0;
     out_valid_d   = 1'b0;
     done_d        = 1'b0;
+    cs_d          = spi_bundle.cs;
     command_d     = command_q;
     counter_d     = counter_q;
     command_val_d = command_val_q;
     address_d     = address_q;
     next_state    = current_state;
     data_d        = data_q;
-    data_out_d    = data_o;
+    data_out_d    = data_out_q;
 
     unique case(current_state)
         IDLE : begin
@@ -131,48 +135,52 @@ always_comb begin
             end 
         
         SHIFT_COMMAND : begin
-            if(counter_q+1 == DATA_W) begin
+            mosi_d        = command_val_q[DATA_W-1];
+            command_val_d = command_val_q << 1;
+
+            if(counter_q == DATA_W-1) begin
                 counter_d  = '0;
                 next_state = SHIFT_ADDR;
             end else begin
-                mosi_d        = command_val_q[DATA_W-1];
-                command_val_d = command_val_q << 1;
-                counter_d     = counter_q + 1;
+                counter_d = counter_q + 1;
             end
         end
 
         SHIFT_ADDR : begin
-            if(counter_q+1 == ADDR_W) begin
+            mosi_d    = address_q[ADDR_W-1]; 
+            address_d = address_q << 1;
+
+            if(counter_q == ADDR_W-1) begin
                 counter_d  = '0;
                 next_state = command_q ? WRITE : READ;
             end else begin
-                mosi_d    = address_q[ADDR_W-1]; 
-                address_d = address_q << 1;
                 counter_d = counter_q + 1;
             end
         end
 
         READ : begin // listen to data
-            if(counter_q+1 == DATA_W) begin
+            data_out_d = {data_out_q[DATA_W-1:1], spi_bundle.miso};
+
+            if(counter_q == DATA_W-1) begin
                 counter_d   = '0;
-                cs_d        = 1'b0;
+                cs_d        = 1'b1; // not listening anymore
                 out_valid_d = 1'b1;
                 next_state  = IDLE; //technically dosen't have to be, but makes things simpler
             end else begin
-                counter_d  = counter_q + 1;
-                data_out_d = {data_o[DATA_W-1:1], spi_bundle.miso};
+                counter_d = counter_q + 1;
             end
         end
 
         WRITE : begin 
-            if(counter_q+1 == DATA_W) begin
+            mosi_d = data_q[DATA_W-1]; 
+            data_d = data_q << 1;
+
+            if(counter_q == DATA_W-1) begin
                 counter_d  = '0;
-                cs_d       = 1'b0;
+                cs_d       = 1'b1; // not listening anymore
                 done_d     = 1'b1;
                 next_state = IDLE; //technically dosen't have to be, but makes things simpler
             end else begin
-                mosi_d    = data_q[ADDR_W-1]; 
-                data_d    = data_q << 1;
                 counter_d = counter_q + 1;
             end  
         end

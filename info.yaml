@@ -11,7 +11,7 @@ project:
   tiles: "1x2"          # Valid values: 1x1, 1x2, 2x2, 3x2, 4x2, 6x2 or 8x2
 
   # Your top module name must start with "tt_um_". Make it unique by including your github username:
-  top_module:  "tt_um_example"
+  top_module:  "tt_um_bfcpu"
 
   # List your project's source files here.
   # Source files must be in ./src and you must list each source file separately, one per line.
@@ -23,7 +23,7 @@ project:
 # This section is for the datasheet/website. Use descriptive names (e.g., RX, TX, MOSI, SCL, SEG_A, etc.).
 pinout:
   # Inputs
-  ui[0]: ""
+  ui[0]: "fill out later" # fill these out later
   ui[1]: ""
   ui[2]: ""
   ui[3]: ""
@@ -33,7 +33,7 @@ pinout:
   ui[7]: ""
 
   # Outputs
-  uo[0]: ""
+  uo[0]: "fill out later"
   uo[1]: ""
   uo[2]: ""
   uo[3]: ""
@@ -43,7 +43,7 @@ pinout:
   uo[7]: ""
 
   # Bidirectional pins
-  uio[0]: ""
+  uio[0]: "fill out later"
   uio[1]: ""
   uio[2]: ""
   uio[3]: ""

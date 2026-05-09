@@ -1,6 +1,6 @@
-//TODO: this moduel needs to be an internal interface for SPI
-// It can take in data (8 bytes, paramterizable) & address
-// - it then seralizes that data and sends to to the external memory
+//Internal Interface for SPI
+//Take in data (8 bytes, paramterizable) & address
+//Seralizes that data and sends to to the external memory
 
 // It can just take an address 
 // - It then fetches the data from that adress, compacts the serial data to a byte and returns it
@@ -26,6 +26,8 @@
 // ui_in[2] - MISO
 // uo_out[5] - SCK
 
+import spi_pkg::*;
+
 module spi_internal #(
     parameter DATA_W = 8,
     parameter ADDR_W = 16
@@ -33,9 +35,10 @@ module spi_internal #(
     input logic              clk,
     input logic              reset_n,
     input logic              in_valid_i,
-    input logic              command_i, //0 for read, 1 for write
     input logic [DATA_W-1:0] data_i,
     input logic [ADDR_W-1:0] address_i,
+
+    input command_t          command_i, //0 for read, 1 for write
     
     output logic              out_valid_o, //for read
     output logic [DATA_W-1:0] data_o,
@@ -62,14 +65,15 @@ logic [DATA_W-1:0]     data_q, data_d;
 logic [DATA_W-1:0]     data_out_d, data_out_q;
 logic                  cs_d;
 logic                  mosi_d;
-logic                  command_q, command_d;
 logic                  done_d;
 logic                  out_valid_d;
+
+command_t              command_q, command_d;
 
 
 //TODO: If valid & command_i = 0, then do fast read & send data out
 //TODO: If valid & command_i = 1, then do write
-//TODO: decide if fast read for normal is better
+//TODO: Decide if fast read for normal is better
 
 // FSM = IDLE -> READ || WRITE -> IDLE
 // On transition idle -> read || write CS = 0
@@ -152,7 +156,7 @@ always_comb begin
 
             if(counter_q == ADDR_W-1) begin
                 counter_d  = '0;
-                next_state = command_q ? WRITE : READ;
+                next_state = (command_q == WRITE_T) ? WRITE : READ;
             end else begin
                 counter_d = counter_q + 1;
             end
@@ -165,7 +169,7 @@ always_comb begin
                 counter_d   = '0;
                 cs_d        = 1'b1; // not listening anymore
                 out_valid_d = 1'b1;
-                next_state  = IDLE; //technically dosen't have to be, but makes things simpler
+                next_state  = IDLE; 
             end else begin
                 counter_d = counter_q + 1;
             end
@@ -179,7 +183,7 @@ always_comb begin
                 counter_d  = '0;
                 cs_d       = 1'b1; // not listening anymore
                 done_d     = 1'b1;
-                next_state = IDLE; //technically dosen't have to be, but makes things simpler
+                next_state = IDLE;
             end else begin
                 counter_d = counter_q + 1;
             end  

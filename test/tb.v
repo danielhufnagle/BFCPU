@@ -14,25 +14,40 @@ module tb ();
   end
 
   // Wire up the inputs and outputs:
-  reg clk;
-  reg rst_n;
-  reg ena;
-  reg [7:0] ui_in;
-  reg [7:0] uio_in;
-  wire [7:0] uo_out;
-  wire [7:0] uio_out;
-  wire [7:0] uio_oe;
+  reg        clk;
+  reg        rst_n;
+  reg        in_valid_i;
+  reg        command_i;
+  reg [7:0]  data_i;
+  reg [15:0] address_i;
+  reg        miso;
+
+  wire       out_valid_o;
+  wire [7:0] data_o;
+  wire       done_o;
+  wire       sclk;
+  wire       cs;
+  wire       mosi;
+
 
   // Replace tt_um_example with your module name:
-  tt_um_example user_project (
-      .ui_in  (ui_in),    // Dedicated inputs
-      .uo_out (uo_out),   // Dedicated outputs
-      .uio_in (uio_in),   // IOs: Input path
-      .uio_out(uio_out),  // IOs: Output path
-      .uio_oe (uio_oe),   // IOs: Enable path (active high: 0=input, 1=output)
-      .ena    (ena),      // enable - goes high when design is selected
-      .clk    (clk),      // clock
-      .rst_n  (rst_n)     // not reset
+  spi_internal #(
+    .DATA_W(8),
+    .ADDR_W(16),
+    .ADDR_BIT_W(4)
+  ) spi_interface (
+    .clk(clk),
+    .reset_n(rst_n),
+    .in_valid_i(in_valid_i),
+    .command_i(command_i), //0 for read, 1 for write
+    .data_i(data_i),
+    .address_i(address_i),
+    .miso_i(miso), //data from external mem
+    .out_valid_o(out_valid_o), //for read
+    .data_o(data_o),
+    .done_o(done_o), //for write, idk if needed
+    .sclk_o(sclk),
+    .cs_o(cs), //active low, activates slave
+    .mosi_o(mosi) //data from asic
   );
-
 endmodule

@@ -5,19 +5,18 @@ from cocotb.types import Logic, LogicArray
 
 from tb_utils.abstract_transactions import AbstractTransaction
 
+# using verilator so can drive any X's
+
 @dataclass
 class SPISequenceItem(AbstractTransaction):
     DATA_W = 8
     ADDR_W = 16
     DATA_MASK = (1 << DATA_W) - 1
     ADDR_MASK = (1 << ADDR_W) - 1
-    WRITE_COMMAND = 0
-    READ_COMMAND = 1
 
-    # Transaction input ports on spi_internal.sv. The generic driver drives
-    # these by name; SPI interface pins are handled by the SPI slave model.
+    # Input ports on spi_internal.v. The generic driver uses these names directly.
     in_valid_i: Logic = field(default_factory=lambda: Logic("0"))
-    command_i: Logic = field(default_factory=lambda: Logic("0"))  # WRITE_T = 0, READ_T = 1
+    command_i: Logic = field(default_factory=lambda: Logic("0"))  # 0 = read, 1 = write
     data_i: LogicArray = field(default_factory=lambda: LogicArray("0" * SPISequenceItem.DATA_W))
     address_i: LogicArray = field(
         default_factory=lambda: LogicArray("0" * SPISequenceItem.ADDR_W)
@@ -61,11 +60,7 @@ class SPISequenceItem(AbstractTransaction):
 
     @property
     def is_write(self) -> bool:
-        return self._to_int(self.command_i, self.WRITE_COMMAND) == self.WRITE_COMMAND
-
-    @property
-    def is_read(self) -> bool:
-        return self._to_int(self.command_i, self.WRITE_COMMAND) == self.READ_COMMAND
+        return bool(self._to_int(self.command_i, 0))
 
     @property
     def to_data(self) -> Dict[str, Any]:
@@ -73,7 +68,6 @@ class SPISequenceItem(AbstractTransaction):
             "in_valid": self.valid,
             "command": self._to_int(self.command_i, 0),
             "is_write": self.is_write,
-            "is_read": self.is_read,
             "data": self._to_int(self.data_i, 0),
             "address": self._to_int(self.address_i, 0),
         }

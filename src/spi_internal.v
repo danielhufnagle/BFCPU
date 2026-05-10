@@ -37,14 +37,14 @@ module spi_internal #(
     input wire              command_i, //0 for read, 1 for write
     input wire [DATA_W-1:0] data_i,
     input wire [ADDR_W-1:0] address_i,
-    input wire              miso, //data from external mem
+    input wire              miso_i, //data from external mem
     
     output reg               out_valid_o, //for read
     output reg  [DATA_W-1:0] data_o,
     output reg               done_o, //for write, idk if needed
-    output wire              sclk,
-    output reg               cs, //active low, activates slave
-    output reg               mosi //data from asic
+    output wire              sclk_o,
+    output reg               cs_o, //active low, activates slave
+    output reg               mosi_o //data from asic
 );
 
 localparam [2:0]        NUM_STATES = 3'd5;
@@ -86,13 +86,13 @@ reg                  command_q, command_d;
 //so we can techinally get as many bytes as we want, as long as they are consecutive
 //non sequential addresses need seperate reads
 
-assign sclk = cs ? 1'b0 : ~clk;
+assign sclk_o = cs_o? 1'b0 : ~clk;
 
 always @(posedge clk or negedge reset_n) begin
     if(!reset_n) begin
         current_state <= IDLE;
-        cs            <= 1'b1;
-        mosi          <= 1'b0;
+        cs_o          <= 1'b0;
+        mosi_o        <= 1'b0;
         counter_q     <= {ADDR_BIT_W{1'b0}};
         command_q     <= 1'b0;
         command_val_q <= {DATA_W{1'b0}};
@@ -104,11 +104,11 @@ always @(posedge clk or negedge reset_n) begin
         out_valid_o   <= 1'b0;
     end else begin
         current_state <= next_state;
-        cs            <= cs_d;
+        cs_o          <= cs_d;
         command_q     <= command_d;
         command_val_q <= command_val_d;
         counter_q     <= counter_d;
-        mosi          <= mosi_d;
+        mosi_o        <= mosi_d;
         address_q     <= address_d;
         data_q        <= data_d;
         data_out_q    <= data_out_d;
@@ -170,7 +170,7 @@ always @(*) begin
         end
 
         READ : begin // listen to data
-            data_out_d = {data_out_q[DATA_W-1:1], miso};
+            data_out_d = {data_out_q[DATA_W-1:1], miso_i};
 
             if(counter_q == DATA_W-1) begin
                 counter_d   = {ADDR_BIT_W{1'b0}};

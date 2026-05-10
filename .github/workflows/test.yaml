@@ -9,11 +9,12 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install iverilog
-        shell: bash
-        run: sudo apt-get update && sudo apt-get install -y iverilog
+      - name: Install OSS CAD Suite (Verilator 5.x + Icarus)
+        uses: YosysHQ/setup-oss-cad-suite@v3
+        with:
+          version: '2026-04-30'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      # Set Python up and install cocotb
       - name: Setup python
         uses: actions/setup-python@v6
         with:

@@ -17,6 +17,7 @@ VERILOG_SOURCES += $(addprefix $(SRC_DIR)/,$(PROJECT_SOURCES))
 ifeq ($(SIM),verilator)
 # Verilator: enable FST waveforms and relax some lint checks
 EXTRA_ARGS += --trace-fst --trace-structs
+EXTRA_ARGS += --timing
 EXTRA_ARGS += -Wno-WIDTH -Wno-UNUSED -Wno-PINMISSING
 endif
 

@@ -2,7 +2,13 @@
 # See https://docs.cocotb.org/en/stable/quickstart.html for more info
 
 # defaults
+# Force icarus for gate-level sim (Verilator can't simulate PDK cells); use
+# `override` so an inherited SIM=verilator from the CI environment can't win.
+ifeq ($(GATES),yes)
+override SIM := icarus
+else
 SIM ?= verilator
+endif
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
 PROJECT_SOURCES = project.sv
@@ -28,8 +34,7 @@ endif
 
 else
 
-# Gate level simulation: force Icarus (Verilator doesn't play nicely with PDK cells)
-SIM = icarus
+# Gate level simulation (SIM forced to icarus above)
 SIM_BUILD = sim_build/gl
 COMPILE_ARGS    += -DGL_TEST
 COMPILE_ARGS    += -DFUNCTIONAL

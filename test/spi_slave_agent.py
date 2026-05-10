@@ -1,6 +1,15 @@
 # spi_slave_agent.py
 
+import cocotb.clock
 from cocotb.triggers import ReadOnly
+
+if not hasattr(cocotb.clock, "BaseClock"):
+    class BaseClock:
+        def __init__(self, signal):
+            pass
+
+    cocotb.clock.BaseClock = BaseClock
+
 from cocotbext.spi import SpiBus, SpiConfig, SpiFrameError, SpiSlaveBase
 
 

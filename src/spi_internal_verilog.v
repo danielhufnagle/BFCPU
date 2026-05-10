@@ -123,7 +123,7 @@ always @(*) begin
     mosi_d        = 1'b0;
     out_valid_d   = 1'b0;
     done_d        = 1'b0;
-    cs_d          = cs;
+    cs_d          = cs_o;
     command_d     = command_q;
     counter_d     = counter_q;
     command_val_d = command_val_q;
@@ -170,7 +170,7 @@ always @(*) begin
         end
 
         READ : begin // listen to data
-            data_out_d = {data_out_q[DATA_W-1:1], miso_i};
+            data_out_d = {data_out_q[DATA_W-2:0], miso_i};
 
             if(counter_q == DATA_W-1) begin
                 counter_d   = {ADDR_BIT_W{1'b0}};

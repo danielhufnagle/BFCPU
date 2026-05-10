@@ -11,6 +11,7 @@ from tb_utils.abstract_transactions import AbstractTransaction
 
 from spi_sequence import SPISequence
 from spi_sequence_item import SPISequenceItem
+from spi_output_checker import SPIOutputChecker
 from spi_slave_agent import SpiSlaveAgent
 
 
@@ -51,6 +52,8 @@ class GenericTestBase(
             monitor=self.monitor, model=model(), checker=checker()
         )
         self.spi_slave = SpiSlaveAgent(dut)
+        self.spi_output_checker = SPIOutputChecker(dut, self.spi_slave)
+        self.sequence.add_subscriber(self.spi_output_checker)
 
     async def wait_for_driver_done(self):
         while await self.driver.busy():

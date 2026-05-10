@@ -7,7 +7,10 @@
 ifeq ($(GATES),yes)
 override SIM := icarus
 else
-SIM ?= verilator
+# Default to icarus so `make clean` (and any other parse) works even when
+# verilator isn't installed (e.g. in the TT gl_test action). The RTL CI
+# workflow opts into verilator explicitly via `SIM=verilator make`.
+SIM ?= icarus
 endif
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src

@@ -2,11 +2,12 @@
 # See https://docs.cocotb.org/en/stable/quickstart.html for more info
 
 # defaults
-SIM ?= icarus
+SIM ?= verilator
 FST ?= -fst # Use more efficient FST format
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
-PROJECT_SOURCES = spi_internal.sv
+PROJECT_SOURCES = spi_pkg.sv spi_if.sv spi_internal.sv
+export PYTHONPATH := $(PWD):$(PWD)/..:$(PYTHONPATH)
 
 ifneq ($(GATES),yes)
 
@@ -32,12 +33,21 @@ endif
 # Allow sharing configuration between design and testbench via `include`:
 COMPILE_ARGS 		+= -I$(SRC_DIR)
 
+ifeq ($(SIM),icarus)
+COMPILE_ARGS 		+= -g2012
+endif
+
+ifeq ($(SIM),verilator)
+COMPILE_ARGS 		+= --timing
+COMPILE_ARGS 		+= -Wno-WIDTHEXPAND
+endif
+
 # Include the testbench sources:
 VERILOG_SOURCES += $(PWD)/tb.sv
 TOPLEVEL = tb
 
 # List test modules to run, separated by commas and without the .py suffix:
-COCOTB_TEST_MODULES = test
+MODULE = test
 
 # include cocotb's make rules to take care of the simulator setup
 include $(shell cocotb-config --makefiles)/Makefile.sim

@@ -1,13 +1,28 @@
-.DS_Store
-.idea
-*.vcd
-*.fst
-*.fst.hier
-runs
-tt_submission
-src/user_config.json
-src/config_merged.json
-test/sim_build
-test/__pycache__/
-test/results.xml
-test/gate_level_netlist.v
+# Ignore every file by default.
+*
+
+# Keep walking directories so allow rules below can match nested files.
+!*/
+
+# Keep gitignore files trackable.
+!.gitignore
+
+# Allow documentation.
+!*.md
+
+# Allow RTL sources.
+!*.v
+!*.sv
+
+# Allow makefiles.
+!Makefile
+!makefile
+!*.mk
+
+# Keep generated/local tool directories ignored even if they contain .md/.v/.sv/Makefile files.
+.venv/
+__pycache__/
+sim_build/
+verilator/
+runs/
+tt_submission/

@@ -17,7 +17,7 @@
 // IF using In_out pins:
 // uio[0] - GPIO21 - CS
 // uio[1] - GPIO22 - MOSI
-// uio[2] - GPIO23 - MISO
+// uio[2] - GPIO23 - MISOS
 // uio[3] - GPIO24 - SCK
 
 // If using regular in and out pins, i dont think it really matters
@@ -25,6 +25,8 @@
 // uo_out[3] - MOSI
 // ui_in[2] - MISO
 // uo_out[5] - SCK
+
+//TODO: need to account for clocks
 
 import spi_pkg::*;
 
@@ -58,6 +60,7 @@ localparam int ADDR_BIT_W = $clog2(ADDR_W);
 typedef enum logic [4:0] {IDLE, SHIFT_COMMAND, SHIFT_ADDR, READ , WRITE} state_t;
 state_t current_state, next_state;
 
+// TODO: need to edit this so it only increments when we get a new bit from miso or output a bit
 logic [ADDR_BIT_W-1:0] counter_q, counter_d; //use for both addr, and command
 logic [DATA_W-1:0]     command_val_d, command_val_q;
 logic [ADDR_W-1:0]     address_q, address_d;
@@ -71,10 +74,8 @@ logic                  out_valid_d;
 command_t              command_q, command_d;
 
 
-//TODO: If valid & command_i = 0, then do fast read & send data out
-//TODO: If valid & command_i = 1, then do write
-//TODO: Decide if fast read for normal is better
-//TODO: make verilog
+//TODO: Implement fast read 
+//TODO: Make a dummy state that waits foir 8 sck cycyles
 
 // FSM = IDLE -> READ || WRITE -> IDLE
 // On transition idle -> read || write CS = 0
@@ -86,7 +87,12 @@ command_t              command_q, command_d;
 //so we can techinally get as many bytes as we want, as long as they are consecutive
 //non sequential addresses need seperate reads
 
+// TODO: edit/divide this so that spi_bundle.sclk is accuretly modeled 
+// normal READ: RP2040 SYS / 10
+// FAST READ:  RP2040 SYS / 8
+// WRITE:      RP2040 SYS / 6
 assign spi_bundle.sclk = spi_bundle.cs ? 1'b0 : ~clk;
+
 
 always_ff @(posedge clk or negedge reset_n) begin
     if(!reset_n) begin

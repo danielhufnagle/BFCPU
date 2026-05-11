@@ -12,6 +12,7 @@ from tb_utils.abstract_transactions import AbstractTransaction
 from spi_sequence import SPISequence
 from spi_sequence_item import SPISequenceItem
 from spi_output_checker import SPIOutputChecker
+from spi_output_transaction import SPIOutputTransaction
 from spi_slave_agent import SpiSlaveAgent
 
 
@@ -37,7 +38,7 @@ class GenericTestBase(
         sequence_item: Type[SeqItemT] = SPISequenceItem,
         sequence: Type[SequenceT] = SPISequence,
         monitor: Type[MonitorT] = GenericMonitor,
-        output_transaction: Type[OutTransT] = AbstractTransaction,
+        output_transaction: Type[OutTransT] = SPIOutputTransaction,
         scoreboard: Type[ScoreboardT] = GenericScoreboard,
         model: Type[ModelT] = GenericModel,
         checker: Type[CheckerT] = GenericChecker,

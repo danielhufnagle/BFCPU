@@ -7,6 +7,17 @@ See below to get started or for more information, check the [website](https://ti
 
 1. Edit [Makefile](Makefile) and modify `PROJECT_SOURCES` to point to your Verilog files.
 2. Edit [tb.v](tb.v) and replace `tt_um_example` with your module name.
+3. Install the Python test dependencies from this directory:
+
+```sh
+python3 -m pip install -r requirements.txt
+```
+
+If that command fails with `No module named pip`, install `pip` for your Python first. On Ubuntu/Debian systems:
+
+```sh
+sudo apt install python3-pip
+```
 
 ## How to run
 
@@ -15,6 +26,10 @@ To run the RTL simulation:
 ```sh
 make -B
 ```
+
+The `make -B` command uses `cocotb-config`, which is installed by the `cocotb` package in `requirements.txt`. If `cocotb-config` is missing, Make will fail before compiling the Verilog.
+
+This testbench now instantiates `spi_internal`, so [test.py](test.py) also needs to drive the SPI testbench signals (`rst_n`, `in_valid_i`, `command_i`, `data_i`, `address_i`, and `miso`) rather than the original Tiny Tapeout sample signals (`ena`, `ui_in`, `uio_in`, and `uo_out`).
 
 To run gatelevel simulation, first harden your project and copy `../runs/wokwi/results/final/verilog/gl/{your_module_name}.v` to `gate_level_netlist.v`.
 

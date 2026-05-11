@@ -13,10 +13,13 @@ class SPISequenceItem(AbstractTransaction):
     ADDR_W = 16
     DATA_MASK = (1 << DATA_W) - 1
     ADDR_MASK = (1 << ADDR_W) - 1
+    WRITE_COMMAND = 0
+    READ_COMMAND = 1
 
-    # Input ports on spi_internal.v. The generic driver uses these names directly.
+    # Transaction input ports on spi_internal.sv. SPI bus pins are driven by
+    # the SPI slave agent, not by this sequence item.
     in_valid_i: Logic = field(default_factory=lambda: Logic("0"))
-    command_i: Logic = field(default_factory=lambda: Logic("0"))  # 0 = read, 1 = write
+    command_i: Logic = field(default_factory=lambda: Logic("0"))  # WRITE_T = 0, READ_T = 1
     data_i: LogicArray = field(default_factory=lambda: LogicArray("0" * SPISequenceItem.DATA_W))
     address_i: LogicArray = field(
         default_factory=lambda: LogicArray("0" * SPISequenceItem.ADDR_W)
@@ -60,7 +63,11 @@ class SPISequenceItem(AbstractTransaction):
 
     @property
     def is_write(self) -> bool:
-        return bool(self._to_int(self.command_i, 0))
+        return self._to_int(self.command_i, self.WRITE_COMMAND) == self.WRITE_COMMAND
+
+    @property
+    def is_read(self) -> bool:
+        return self._to_int(self.command_i, self.WRITE_COMMAND) == self.READ_COMMAND
 
     @property
     def to_data(self) -> Dict[str, Any]:
@@ -68,6 +75,7 @@ class SPISequenceItem(AbstractTransaction):
             "in_valid": self.valid,
             "command": self._to_int(self.command_i, 0),
             "is_write": self.is_write,
+            "is_read": self.is_read,
             "data": self._to_int(self.data_i, 0),
             "address": self._to_int(self.address_i, 0),
         }

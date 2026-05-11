@@ -1,6 +1,7 @@
 # spi_slave_agent.py
 
 import cocotb.clock
+from cocotb.types import Logic, LogicArray
 from cocotb.triggers import ReadOnly
 
 if not hasattr(cocotb.clock, "BaseClock"):
@@ -9,6 +10,12 @@ if not hasattr(cocotb.clock, "BaseClock"):
             pass
 
     cocotb.clock.BaseClock = BaseClock
+
+if not hasattr(Logic, "integer"):
+    Logic.integer = property(lambda self: int(self))
+
+if not hasattr(LogicArray, "integer"):
+    LogicArray.integer = property(lambda self: int(self))
 
 from cocotbext.spi import SpiBus, SpiConfig, SpiFrameError, SpiSlaveBase
 
@@ -83,7 +90,8 @@ class SpiSlave(SpiSlaveBase):
     async def _read_stream(self, address):
         while await self._cs_active():
             try:
-                await self._shift(8, tx_word=self.read_memory(address))
+                data = self.read_memory(address)
+                await self._shift(8, tx_word=data)
             except SpiFrameError:
                 break
 

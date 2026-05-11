@@ -86,7 +86,7 @@ command_t              command_q, command_d;
 //so we can techinally get as many bytes as we want, as long as they are consecutive
 //non sequential addresses need seperate reads
 
-assign spi_bundle.sclk = clk;
+assign spi_bundle.sclk = spi_bundle.cs ? 1'b0 : ~clk;
 
 always_ff @(posedge clk or negedge reset_n) begin
     if(!reset_n) begin
@@ -133,9 +133,11 @@ always_comb begin
                     cs_d          = 1'b0;
                     next_state    = SHIFT_COMMAND;
                     command_d     = command_i;
-                    address_d     = address_i;
+                    address_d     = address_i;                    
                     data_d        = data_i;
-                    command_val_d = (command_i == WRITE_T) ? WRITE_CMD : READ_CMD;
+                    command_val_d = ((command_i == WRITE_T) ? WRITE_CMD : READ_CMD) << 1;
+                    mosi_d        = ((command_i == WRITE_T) ? WRITE_CMD[DATA_W-1] : READ_CMD[DATA_W-1]);
+                    counter_d     = 1;
                 end
             end 
         
@@ -164,9 +166,13 @@ always_comb begin
         end
 
         READ : begin // listen to data
-            data_out_d = {data_out_q[DATA_W-1:1], spi_bundle.miso};
+            cs_d = 1'b0;
 
-            if(counter_q == DATA_W-1) begin
+            if(counter_q != '0) begin
+                data_out_d = {data_out_q[DATA_W-2:0], spi_bundle.miso};
+            end
+
+            if(counter_q == DATA_W+1) begin
                 counter_d   = '0;
                 cs_d        = 1'b1; // not listening anymore
                 out_valid_d = 1'b1;
@@ -176,18 +182,19 @@ always_comb begin
             end
         end
 
-        WRITE : begin 
-            mosi_d = data_q[DATA_W-1]; 
+        WRITE : begin
+            cs_d   = 1'b0;
+            mosi_d = data_q[DATA_W-1];
             data_d = data_q << 1;
 
-            if(counter_q == DATA_W-1) begin
+            if(counter_q == DATA_W + 1) begin
                 counter_d  = '0;
-                cs_d       = 1'b1; // not listening anymore
+                cs_d       = 1'b1;
                 done_d     = 1'b1;
                 next_state = IDLE;
             end else begin
                 counter_d = counter_q + 1;
-            end  
+            end
         end
     endcase
 end

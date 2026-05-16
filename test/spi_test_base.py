@@ -61,3 +61,6 @@ class GenericTestBase(
             await RisingEdge(self.dut.clk)
 
         await Timer(1000, unit="ns")
+
+    def stop(self):
+        self.spi_slave.stop()

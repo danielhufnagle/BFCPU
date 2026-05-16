@@ -22,16 +22,58 @@ async def test_spi_write_and_read(dut):
     clock.start()
 
     tb = SPITestBase(dut)
-    await reset_dut(dut)
+    try:
+        await reset_dut(dut)
 
-    write_address = 0x1234
-    write_data = 0xA5
-    await tb.sequence.send_manual_write(data_i=write_data, address_i=write_address)
-    await RisingEdge(dut.done_o)
-    assert tb.spi_slave.read_memory(write_address) == write_data
+        write_address = 0x1234
+        write_data = 0xA5
+        await tb.sequence.send_manual_write(data_i=write_data, address_i=write_address)
+        await RisingEdge(dut.done_o)
+        assert tb.spi_slave.read_memory(write_address) == write_data
 
-    read_address = 0x4321
-    read_data = 0x3C
-    await tb.sequence.send_manual_read(data_i=read_data, address_i=read_address)
-    await RisingEdge(dut.out_valid_o)
-    assert int(dut.data_o.value) == read_data
+        read_address = 0x4321
+        read_data = 0x3C
+        await tb.sequence.send_manual_read(data_i=read_data, address_i=read_address)
+        await RisingEdge(dut.out_valid_o)
+        assert int(dut.data_o.value) == read_data
+    finally:
+        tb.stop()
+
+
+@cocotb.test()
+async def test_spi_back_to_back_writes(dut):
+    clock = Clock(dut.clk, 10, unit="ns")
+    clock.start()
+
+    tb = SPITestBase(dut)
+    try:
+        await reset_dut(dut)
+
+        write_address = 0x1234
+        write_data = 0xA5
+        await tb.sequence.send_manual_write(data_i=write_data, address_i=write_address)
+        await RisingEdge(dut.done_o)
+        assert tb.spi_slave.read_memory(write_address) == write_data
+        await RisingEdge(dut.clk)
+
+        write_address = 0xE976
+        write_data = 0xDF
+        await tb.sequence.send_manual_write(data_i=write_data, address_i=write_address)
+        await RisingEdge(dut.done_o)
+        assert tb.spi_slave.read_memory(write_address) == write_data
+        await RisingEdge(dut.clk)
+
+        write_address = 0x5678
+        write_data = 0xFF
+        await tb.sequence.send_manual_write(data_i=write_data, address_i=write_address)
+        await RisingEdge(dut.done_o)
+        assert tb.spi_slave.read_memory(write_address) == write_data
+        await RisingEdge(dut.clk)
+
+        write_address = 0x5678
+        write_data = 0x11
+        await tb.sequence.send_manual_write(data_i=write_data, address_i=write_address)
+        await RisingEdge(dut.done_o)
+        assert tb.spi_slave.read_memory(write_address) == write_data
+    finally:
+        tb.stop()
